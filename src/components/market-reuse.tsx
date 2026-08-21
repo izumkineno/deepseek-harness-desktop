@@ -7,17 +7,19 @@ function createT(_lang: string) {
 
 export default function MarketReuse() {
   const t = useMemo(() => createT('zh'), [])
+  const localeSnapshot = useMemo(() => ({ active: 'zh-CN' as const }), [])
   const locale = useMemo(() => ({
     subscribe: (_cb: () => void) => () => {},
-    getSnapshot: () => ({ active: 'zh-CN' }),
-  }), [])
+    getSnapshot: () => localeSnapshot,
+  }), [localeSnapshot])
   const theme = useMemo(() => ({
     setTheme: (_id: string) => {},
   }), [])
+  const themeSnapshot = useMemo(() => null as any, [])
   const themeStore = useMemo(() => ({
     subscribe: (_cb: () => void) => () => {},
-    getSnapshot: () => null,
-  }), [])
+    getSnapshot: () => themeSnapshot,
+  }), [themeSnapshot])
 
   return (
     <div className="min-h-0 flex-1 overflow-auto bg-canvas">
