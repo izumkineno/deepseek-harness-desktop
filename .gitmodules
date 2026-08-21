@@ -1,0 +1,4 @@
+[submodule "packages/dsh-market"]
+	path = packages/dsh-market
+	url = https://github.com/dsh-market/dsh-market.git
+	branch = main
