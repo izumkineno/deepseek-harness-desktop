@@ -133,5 +133,19 @@
   "app.debug_sidebar_title": "Application Debug",
   "messages.logs_copied": "Logs copied to clipboard",
   "app.debug": "Debug",
-  "app.help": "Help"
+  "app.help": "Help",
+  "market.title": "Plugin Market (Standalone)",
+  "market.subtitle": "Hosted by this desktop on :3082, independent of dsh web (3080). Works even when dsh crashes or is not started. Backend unchanged: dsh-market routes reused.",
+  "market.host_alive": "Market ready",
+  "market.host_dead": "Market not ready",
+  "market.host_port": "Port",
+  "market.refresh": "Refresh",
+  "market.status": "Market status /dsh-market/status",
+  "market.registry": "Registry /dsh-market/registry",
+  "market.installed": "Installed /dsh-market/installed",
+  "market.loading": "Loading…",
+  "market.host_hint": "Sidecar 3082 isolated from dsh 3080/3081; frontend accesses via Tauri proxy_market_request to avoid CSP.",
+  "market.scheme_hint": "Scheme C: host replacement, backend unchanged. Node sidecar mounts packages/dsh-market/lib/routes.js, desktop is host.",
+  "market.tab_harness": "Harness",
+  "market.tab_market": "Market"
 }

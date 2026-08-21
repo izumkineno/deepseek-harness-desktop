@@ -22,14 +22,13 @@ pub fn run() {
             tauri::RunEvent::Reopen { .. } => {
                 crate::core::utils::show_main_window(&app_handle);
             }
-            // 退出时回收 Harness 进程：不回收的话，node 进程会在应用退出后
-            // 残留并把原生模块 DLL（如 sharp 的 libvips-42.dll）锁在内存，
-            // 下次启动重新解压时会失败（Windows os error 32）
+            // 退出时回收 Harness 与市场 sidecar 进程
             tauri::RunEvent::Exit => {
                 let setting = config::get_store_dat_setting(app_handle);
                 if setting.installed {
                     service::workflow::stop_on_exit(app_handle.clone(), setting.port);
                 }
+                service::market_host::stop_on_exit();
             }
             _ => {}
         });

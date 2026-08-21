@@ -1,6 +1,7 @@
 import { desktopUpdate } from './modules/desktop-update'
 import { download } from './modules/download'
 import { harness } from './modules/harness'
+import { market } from './modules/market/store'
 import { setting } from './modules/setting'
 import { updater } from './modules/updater'
 
@@ -11,6 +12,7 @@ export const store = {
   download,
   setting,
   desktopUpdate,
+  market,
 }
 
 export { desktopUpdate } from './modules/desktop-update'
@@ -30,6 +32,7 @@ export type {
   SetupStatus,
   SidebarBusyAction,
 } from './modules/harness'
+export { market } from './modules/market/store'
 export { setting } from './modules/setting'
 export { updater } from './modules/updater'
 export type { DshUpdateInfo } from './modules/updater'

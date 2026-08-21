@@ -15,7 +15,6 @@ use crate::desktop::window::{on_download, on_new_window};
 #[cfg(windows)]
 use crate::desktop::window::on_page_load;
 
-/// setup app
 pub fn setup(app_handle: tauri::AppHandle) {
     // 启动前清扫上次崩溃残留的孤儿 Harness（端口/PID 双重确认，见
     // workflow::sweep_orphan_harness），避免新实例一路漂移端口
@@ -31,6 +30,15 @@ pub fn setup(app_handle: tauri::AppHandle) {
 
     // 启动进程监控（tick 检测 dsh 服务状态）
     crate::service::scheduler::start(&app_handle);
+
+    // Scheme C：独立市场 sidecar（宿主替换，后端 0 改），与 dsh web 进程隔离
+    // dsh 崩溃/未启动时市场仍可用（http://127.0.0.1:3082）
+    let market_handle = app_handle.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = crate::service::market_host::start(market_handle).await {
+            log::warn!("[market-host] autostart failed: {e}");
+        }
+    });
 
     // 开机自启动：已安装且开启 auto_start 时拉起服务
     let app_for_start = app_handle.clone();
@@ -220,6 +228,10 @@ pub fn handler() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         crate::bridge::cmd::open_desktop_installer,
         crate::bridge::cmd::get_desktop_about,
         crate::bridge::cmd::open_external_url,
+        crate::bridge::cmd::start_market,
+        crate::bridge::cmd::stop_market,
+        crate::bridge::cmd::get_market_status,
+        crate::bridge::cmd::proxy_market_request,
         crate::desktop::notification::show_native_notification,
     ]
 }

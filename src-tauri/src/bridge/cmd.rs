@@ -569,3 +569,57 @@ pub async fn open_external_url(app_handle: AppHandle, url: String) -> Result<(),
         .open_url(url, None::<&str>)
         .map_err(|e| e.to_string())
 }
+/// 启动独立市场 sidecar（Scheme C：宿主替换，后端 0 改）
+#[tauri::command]
+pub async fn start_market(app_handle: AppHandle) -> Result<u16, String> {
+    crate::service::market_host::start(app_handle).await
+}
+
+/// 停止独立市场 sidecar
+#[tauri::command]
+pub async fn stop_market() -> Result<(), String> {
+    crate::service::market_host::stop().await
+}
+
+/// 获取市场 sidecar 状态（端口 + 是否存活）
+#[tauri::command]
+pub fn get_market_status() -> serde_json::Value {
+    serde_json::json!({
+        "port": crate::service::market_host::get_market_port(),
+        "alive": crate::service::market_host::is_market_alive(),
+    })
+}
+
+/// 代理市场 sidecar 请求（避免前端 CSP 直连限制，前端通过 invoke 访问 dsh-market API）
+#[tauri::command]
+pub async fn proxy_market_request(
+    path: String,
+    method: Option<String>,
+    body: Option<String>,
+) -> Result<String, String> {
+    let port = crate::service::market_host::get_market_port();
+    let url = format!("http://127.0.0.1:{}{}", port, path);
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("MARKET_PROXY_CLIENT_FAILED: {e}"))?;
+    let m = method.unwrap_or_else(|| "GET".to_string());
+    let mut req = match m.as_str() {
+        "POST" => client.post(&url),
+        "PUT" => client.put(&url),
+        "DELETE" => client.delete(&url),
+        _ => client.get(&url),
+    };
+    let origin = format!("http://127.0.0.1:{port}");
+    req = req.header("Origin", origin).header("Host", format!("127.0.0.1:{port}"));
+    if let Some(b) = body {
+        req = req.body(b).header("content-type", "application/json");
+    }
+    let resp = req.send().await.map_err(|e| format!("MARKET_PROXY_FAILED: {e}"))?;
+    let status = resp.status().as_u16();
+    let text = resp.text().await.map_err(|e| format!("MARKET_PROXY_READ_FAILED: {e}"))?;
+    if status >= 400 {
+        return Err(format!("MARKET_PROXY_{status}: {text}"));
+    }
+    Ok(text)
+}

@@ -133,5 +133,19 @@
   "app.debug_sidebar_title": "应用调试",
   "messages.logs_copied": "日志已复制到剪贴板",
   "app.debug": "调试",
-  "app.help": "帮助"
+  "app.help": "帮助",
+  "market.title": "插件市场（独立）",
+  "market.subtitle": "由本项目宿主，独立于 dsh web 进程（3082），dsh 崩溃/未启动时仍可用。后端 0 改：复用 dsh-market 原生路由。",
+  "market.host_alive": "市场就绪",
+  "market.host_dead": "市场未就绪",
+  "market.host_port": "端口",
+  "market.refresh": "刷新",
+  "market.status": "市场状态 /dsh-market/status",
+  "market.registry": "目录 /dsh-market/registry",
+  "market.installed": "已安装 /dsh-market/installed",
+  "market.loading": "加载中…",
+  "market.host_hint": "侧车端口 3082 与 dsh 的 3080/3081 隔离；前端通过 Tauri proxy_market_request 访问，避免 CSP 直连限制。",
+  "market.scheme_hint": "Scheme C：宿主替换，后端 0 改。Node 侧车挂载 packages/dsh-market/lib/routes.js，桌面为宿主。",
+  "market.tab_harness": "Harness",
+  "market.tab_market": "市场"
 }
