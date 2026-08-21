@@ -11,3 +11,5 @@ src-tauri/resources/node
 .tmp
 skills
 .serena
+.agents
+.omc

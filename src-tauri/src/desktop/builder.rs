@@ -47,15 +47,19 @@ pub fn setup(app_handle: tauri::AppHandle) {
 
     // 命令行集成自愈：已安装且开启时，确保 shim 与 PATH 注册完整
     // （shim 被删除、PATH 条目丢失等情况下自动重建）
+    let app_for_cli = app_handle.clone();
     tauri::async_runtime::spawn(async move {
-        let setting = crate::config::get_store_dat_setting(&app_handle);
+        let setting = crate::config::get_store_dat_setting(&app_for_cli);
         if !setting.installed || !setting.cli_link_enabled {
             return;
         }
-        if let Err(e) = crate::service::cli::ensure(&app_handle) {
+        if let Err(e) = crate::service::cli::ensure(&app_for_cli) {
             log::warn!("cli link self-heal failed: {e}");
         }
     });
+
+    // market sidecar — Node 驱动的 dsh-market 后端，Rust 仅作进程管家
+    crate::service::market_sidecar::ensure_started(app_handle);
 }
 
 /// setup tray
@@ -221,7 +225,7 @@ pub fn handler() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         crate::bridge::cmd::get_desktop_about,
         crate::bridge::cmd::open_external_url,
         crate::desktop::notification::show_native_notification,
-        crate::bridge::cmd::log_frontend,
+        crate::bridge::cmd::log_frontend
     ]
 }
 

@@ -21,12 +21,11 @@
 //! - [`process`]：dsh 子进程启动与输出流逐行转发
 //! - [`cancel`]：Windows 下取消正在进行的安装
 //! - [`watch`]：已安装插件文件监控（轮询指纹比对 + `dsh-plugins-updated` 事件推送）
-
 mod cancel;
 mod install;
 mod installed;
 mod preset;
-mod process;
+pub(crate) mod process;
 pub mod watch;
 
 pub use cancel::cancel;

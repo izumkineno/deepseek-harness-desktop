@@ -285,6 +285,7 @@ export function ConfigDebug() {
               size="sm"
               className="rounded-md text-xs size-6 text-muted"
               variant="ghost"
+              aria-label={t('preinstall.settings_hint')}
             >
               <CircleInfo />
             </Button>
@@ -336,6 +337,7 @@ export function ConfigDebug() {
               size="sm"
               className="rounded-md size-6"
               variant="ghost"
+              aria-label={t('buttons.copy')}
               onPress={async () => {
                 await navigator.clipboard.writeText(logs || '')
                 toast(t('messages.logs_copied'), {})
@@ -348,6 +350,7 @@ export function ConfigDebug() {
               size="sm"
               className="rounded-md size-6"
               variant="ghost"
+              aria-label={t('buttons.refresh_logs')}
               onPress={() => refreshLogs()}
             >
               <ArrowRotateRight className="scale-80" />
@@ -357,6 +360,7 @@ export function ConfigDebug() {
               size="sm"
               className="rounded-md size-6"
               variant="ghost"
+              aria-label={t('buttons.clear_logs')}
               onPress={() => onClearLogs()}
             >
               <TrashBin className="scale-80" />

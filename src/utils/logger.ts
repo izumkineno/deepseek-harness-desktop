@@ -54,6 +54,37 @@ function shouldLog(level: LogLevel): boolean {
   return LEVEL_ORDER[level] >= LEVEL_ORDER[currentLevel]
 }
 
+// 需要过滤的噪音日志（精确子串匹配，避免正则开销）
+const FILTERED_SUBSTRINGS: readonly string[] = [
+  'If you do not provide a visible label',
+]
+
+function isFilteredMessage(args: unknown[]): boolean {
+  for (const a of args) {
+    if (typeof a === 'string') {
+      for (const p of FILTERED_SUBSTRINGS) if (a.includes(p)) return true
+    } else if (a != null && typeof a === 'object') {
+      // 兼容对象被 JSON 序列化后的情况
+      try {
+        const s = JSON.stringify(a)
+        for (const p of FILTERED_SUBSTRINGS) if (s.includes(p)) return true
+      }
+      catch {
+        // 忽略序列化异常
+      }
+    }
+  }
+  // 兜底：多参拼接（如 %s 占位）场景，拼接后整体判断
+  try {
+    const joined = serializeMessage(args)
+    for (const p of FILTERED_SUBSTRINGS) if (joined.includes(p)) return true
+  }
+  catch {
+    // 忽略序列化异常
+  }
+  return false
+}
+
 function serializeMessage(args: unknown[]): string {
   return args
     .map((a) => {
@@ -73,6 +104,8 @@ function serializeMessage(args: unknown[]): string {
 
 function forwardToRust(level: LogLevel, tag: string, args: unknown[]) {
   if (level === 'off')
+    return
+  if (isFilteredMessage(args))
     return
   try {
     const message = serializeMessage(args)
@@ -116,6 +149,7 @@ if (typeof window !== 'undefined' && typeof console !== 'undefined' && _origCons
     const lvl = _consoleLevel[m] ?? 'info'
     if ((orig as unknown as { __hijacked?: boolean }).__hijacked) continue
     const hijacked = (...args: unknown[]) => {
+      if (isFilteredMessage(args)) return
       if (!shouldLog(lvl)) return
       if (import.meta.env.PROD && LEVEL_ORDER[lvl] < LEVEL_ORDER.warn) {
         forwardToRust(lvl, 'frontend', args)

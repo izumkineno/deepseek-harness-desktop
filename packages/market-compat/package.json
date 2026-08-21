@@ -1,0 +1,13 @@
+{
+  "name": "@desktop/market-compat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Compatibility layer between desktop UI (heroui) and dsh-market backend — single maintenance point for plugin module.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pure": "./src/pure.ts",
+    "./types": "./src/types.ts",
+    "./backend": "./src/backend.ts"
+  }
+}
