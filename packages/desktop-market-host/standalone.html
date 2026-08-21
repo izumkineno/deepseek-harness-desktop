@@ -1,0 +1,184 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dsh-market — Desktop Standalone (3082)</title>
+<style>
+:root{--accent:#c0392b;--accent-soft:#f7e5e2;--ink:#101722;--ink2:#5b6472;--ink3:#9aa3b2;--line:#e7eaf0;--bg:#fafbfd;--card:#fff;--ok:#0a7a42;--warn:#b7791f}
+*{box-sizing:border-box;margin:0}
+body{font-family:-apple-system,"SF Pro Text","Segoe UI",PingFang SC,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+header{position:sticky;top:0;z-index:10;background:rgba(250,251,253,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header h1{font-size:15px;font-weight:700}
+header .grow{flex:1}
+header input,header select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--card)}
+header input{width:260px;max-width:40vw}
+.badge{font-size:11px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:2px 8px;color:var(--ink2)}
+.badge.ok{border-color:#c8f0d8;background:#eafaf0;color:var(--ok)}
+.badge.warn{border-color:#fbe2a6;background:#fff7e6;color:var(--warn)}
+.wrap{max-width:1200px;margin:0 auto;padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.card h3{font-size:14px;font-weight:700;word-break:break-all}
+.card h3 small{font-weight:500;color:var(--ink3)}
+.card p{font-size:12px;color:var(--ink2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:36px}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--ink3)}
+.meta span{border:1px solid var(--line);border-radius:999px;padding:1px 7px;background:var(--bg)}
+.actions{display:flex;gap:8px;align-items:center;margin-top:4px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.primary:disabled{opacity:.6;cursor:not-allowed}
+.btn.ghost{background:transparent}
+.status{font-size:11px;color:var(--ink3);margin-top:4px;min-height:14px;word-break:break-all}
+.notice{position:fixed;right:16px;bottom:16px;background:var(--ink);color:#fff;border-radius:10px;padding:10px 14px;font-size:13px;max-width:360px;box-shadow:0 8px 24px rgba(0,0,0,.2);display:none}
+.notice.show{display:block}
+.foot{padding:24px 16px;text-align:center;font-size:12px;color:var(--ink3)}
+a{color:var(--accent);text-decoration:none}
+</style>
+<header>
+  <h1>🧩 dsh-market <span style="font-weight:500;color:var(--ink3)">Desktop Standalone · 3082 · 后端 0 改</span></h1>
+  <span class="grow"></span>
+  <input id="q" placeholder="搜索 名称 / 描述 / owner">
+  <select id="cat"><option value="">全部分类</option></select>
+  <span id="count" class="badge">—</span>
+  <span id="health" class="badge">checking…</span>
+</header>
+<div class="wrap">
+  <div id="installedBar" style="font-size:12px;color:var(--ink2);margin-bottom:8px"></div>
+  <div id="grid" class="grid"></div>
+  <div id="empty" style="display:none;text-align:center;color:var(--ink3);padding:40px">无匹配插件</div>
+</div>
+<div id="notice" class="notice"></div>
+<div class="foot">由本项目宿主 · 侧车 3082 与 dsh 3080/3081 隔离 · 数据来自 <code>/dsh-market/registry</code>（awesome-dsh-plugin）· 安装经 <code>POST /dsh-market/install {url}</code></div>
+<script>
+const $ = s => document.querySelector(s)
+const grid = $('#grid'), q = $('#q'), cat = $('#cat'), count = $('#count'), health = $('#health'), notice = $('#notice'), installedBar = $('#installedBar'), empty = $('#empty')
+let registry = null, installed = {}
+let categories = {}
+
+function toast(msg, ok=true){
+  notice.textContent = msg
+  notice.style.background = ok ? 'var(--ink)' : '#c0392b'
+  notice.classList.add('show')
+  clearTimeout(toast._t)
+  toast._t = setTimeout(()=>notice.classList.remove('show'), 3200)
+}
+async function jget(path){
+  const r = await fetch(path)
+  const t = await r.text()
+  if(!r.ok) throw new Error(t.slice(0,400))
+  return JSON.parse(t)
+}
+async function jpost(path, body){
+  const r = await fetch(path, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)})
+  const t = await r.text()
+  if(!r.ok) throw new Error(t.slice(0,600))
+  return t ? JSON.parse(t) : {}
+}
+async function refreshHealth(){
+  try{
+    const s = await jget('/dsh-market/status')
+    health.textContent = `market ${s.version} · pnpm ${s.pnpm?'ok':'missing'} · ${s.installed ? Object.keys(s.installed).length : 0} installed`
+    health.className = 'badge ok'
+    installed = s.installed || {}
+    installedBar.textContent = `已安装 ${Object.keys(installed).length} 个 · 点卡片“已安装”可卸载（/uninstall）`
+  }catch(e){
+    health.textContent = 'health failed'
+    health.className = 'badge warn'
+  }
+}
+async function refreshRegistry(){
+  try{
+    const r = await jget('/dsh-market/registry')
+    registry = r.registry || r
+    count.textContent = `${registry.count || (registry.plugins||[]).length} plugins`
+    categories = registry.categories || {}
+    // 填充分类
+    for(const k of Object.keys(categories)){
+      const o = document.createElement('option')
+      o.value = k
+      const lab = categories[k]?.zh || categories[k]?.en || k
+      o.textContent = lab
+      cat.appendChild(o)
+    }
+    render()
+  }catch(e){
+    count.textContent = 'registry failed'
+    toast('registry 拉取失败: '+e.message, false)
+  }
+}
+function match(p, term, catVal){
+  if(catVal && p.category !== catVal) return false
+  if(!term) return true
+  term = term.toLowerCase()
+  return (p.name||'').toLowerCase().includes(term) || (p.description||'').toLowerCase().includes(term) || (p.owner||'').toLowerCase().includes(term) || (p.url||'').toLowerCase().includes(term)
+}
+function isInstalled(p){
+  // 简单判定：已安装 map 含 npm 名或 name
+  if(p.npm && installed[p.npm]) return true
+  if(installed[p.name]) return true
+  // 兜底：url 含 repo 名
+  const repo = (p.url||'').split('/').slice(-2).join('/').toLowerCase()
+  for(const k of Object.keys(installed)){
+    if(k.toLowerCase()===repo) return true
+  }
+  return false
+}
+function render(){
+  if(!registry) return
+  const term = q.value.trim()
+  const catVal = cat.value
+  const list = (registry.plugins||[]).filter(p=>match(p, term, catVal)).slice(0, 600)
+  grid.innerHTML = ''
+  if(list.length===0){ empty.style.display='block'; return } else empty.style.display='none'
+  for(const p of list){
+    const installedNow = isInstalled(p)
+    const el = document.createElement('div')
+    el.className = 'card'
+    const stars = p.stars ? `★ ${p.stars}` : ''
+    const catLab = (categories[p.category]?.zh || p.category || '')
+    el.innerHTML = `
+      <h3>${p.name} <small>@${p.owner}</small></h3>
+      <p>${(p.description||'').replace(/</g,'&lt;')}</p>
+      <div class="meta">
+        <span>${catLab||p.category||''}</span>
+        ${stars?`<span>${stars}</span>`:''}
+        ${p.npm?`<span>npm:${p.npm}</span>`:''}
+        <a href="${p.url}" target="_blank" rel="noopener">repo</a>
+      </div>
+      <div class="actions">
+        <button class="btn ${installedNow?'ghost':'primary'}" ${installedNow?'disabled':''}>${installedNow?'已安装':'安装'}</button>
+        <span class="badge">${installedNow?'installed':'not installed'}</span>
+      </div>
+      <div class="status"></div>
+    `
+    const btn = el.querySelector('button')
+    const status = el.querySelector('.status')
+    if(!installedNow){
+      btn.onclick = async ()=>{
+        btn.disabled = true
+        btn.textContent = '安装中…'
+        status.textContent = 'POST /dsh-market/install …'
+        try{
+          const r = await jpost('/dsh-market/install', {url: p.url})
+          status.textContent = '✓ 已提交，刷新状态…'
+          toast(`已安装 ${p.name}`)
+          await refreshHealth()
+          btn.textContent = '已安装'
+          btn.className = 'btn ghost'
+          el.querySelector('.badge').textContent = 'installed'
+        }catch(e){
+          status.textContent = '✗ ' + e.message
+          toast('安装失败: '+e.message, false)
+          btn.disabled = false
+          btn.textContent = '安装'
+        }
+      }
+    }
+    grid.appendChild(el)
+  }
+}
+q.addEventListener('input', render)
+cat.addEventListener('change', render)
+refreshHealth()
+refreshRegistry()
+setInterval(refreshHealth, 8000)
+</script>

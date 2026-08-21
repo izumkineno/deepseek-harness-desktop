@@ -7,8 +7,7 @@
 import http from 'node:http'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { existsSync } from 'node:fs'
-
+import { existsSync, readFileSync } from 'node:fs'
 const PORT = Number(process.env.MARKET_PORT || 3082)
 const PROFILE = process.env.DSH_PROFILE || 'web'
 // 复用桌面与官方一致的 DSH_HOME 解析
@@ -94,20 +93,44 @@ const server = http.createServer((req, res) => {
     return
   }
 
-  const route = matchRoute(pathname)
-  if (!route) {
-    // 前端 standalone 页：GET / 或 /market 时返回最小 HTML，引导到桌面原生页
-    if (req.method === 'GET' && (pathname === '/' || pathname === '/market')) {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
-      res.end(`<!doctype html><meta charset="utf-8"><title>dsh-market (DesktopHost)</title>
-<style>body{font-family:system-ui;padding:32px}code{background:#f4f4f5;padding:2px 6px;border-radius:4px}</style>
-<h1>dsh-market — DesktopHost sidecar</h1>
-<p>profile: <code>${PROFILE}</code> &nbsp; dir: <code>${profileDir}</code> &nbsp; routes: <code>${routes.length}</code></p>
-<p>API: <code>GET /dsh-market/status</code> | <code>POST /dsh-market/install</code> | <code>GET /__market_health</code></p>
-<p>此 sidecar 仅承载后端 API，前端由桌面原生 <code>MarketPage</code> 通过 <code>http://127.0.0.1:${PORT}</code> 调用。</p>
-<p>后端 0 改：<code>packages/dsh-market/lib/routes.js</code> 原样挂载。</p>`)
+  // 静态：独立市场 UI（A 路径：iframe 可直接逛）
+  if (req.method === 'GET' && (pathname === '/' || pathname === '/market' || pathname === '/market/')) {
+    try {
+      const htmlPath = new URL('./standalone.html', import.meta.url)
+      const html = readFileSync(htmlPath, 'utf8')
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+      res.end(html)
+      return
+    } catch (e) {
+      res.writeHead(500, { 'content-type': 'text/plain' })
+      res.end('standalone.html missing: ' + String(e))
       return
     }
+  }
+  // 静态：dsh-market 资产（如需要）
+  if (pathname.startsWith('/assets/')) {
+    try {
+      const assetPath = join(profileDir, '..', '..', '..', 'packages/dsh-market', pathname.replace(/^\//, ''))
+      // 回退：相对 host.mjs 的包路径
+      const tryPaths = [
+        new URL('../dsh-market' + pathname, import.meta.url),
+        new URL('../../packages/dsh-market' + pathname, import.meta.url),
+      ]
+      for (const p of tryPaths) {
+        try {
+          const data = readFileSync(p)
+          const ext = pathname.split('.').pop()
+          const ct = ext === 'svg' ? 'image/svg+xml' : ext === 'png' ? 'image/png' : 'application/octet-stream'
+          res.writeHead(200, { 'content-type': ct, 'cache-control': 'public, max-age=86400' })
+          res.end(data)
+          return
+        } catch {}
+      }
+    } catch {}
+  }
+
+  const route = matchRoute(pathname)
+  if (!route) {
     res.writeHead(404, { 'content-type': 'application/json' })
     res.end(JSON.stringify({ error: 'not found', path: pathname }))
     return

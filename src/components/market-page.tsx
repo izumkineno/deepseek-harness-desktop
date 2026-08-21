@@ -8,135 +8,71 @@ import { store } from '@/store'
 export default function MarketPage() {
   const { t } = useTranslation()
   const { marketAlive, marketPort, statusJson, error, loading } = useStore(store.market)
-  const [registryText, setRegistryText] = useState<string | null>(null)
-  const [registryError, setRegistryError] = useState<string | null>(null)
-  const [installedText, setInstalledText] = useState<string | null>(null)
-
-  function formatJson(json: string | null): string {
-    if (!json) return ''
-    try {
-      return JSON.stringify(JSON.parse(json), null, 2)
-    } catch {
-      return json
-    }
-  }
+  const [iframeError, setIframeError] = useState(false)
 
   function handleRefresh() {
-    store.market.refreshStatus()
-    void refreshRegistry()
-    void refreshInstalled()
+    void store.market.refreshStatus()
   }
 
-  async function refreshRegistry() {
-    setRegistryError(null)
-    try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      const json = await invoke<string>('proxy_market_request', {
-        path: '/dsh-market/registry',
-        method: 'GET',
-      })
-      setRegistryText(json)
-    } catch (e) {
-      setRegistryError(String(e))
-    }
-  }
-
-  async function refreshInstalled() {
-    try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      const json = await invoke<string>('proxy_market_request', {
-        path: '/dsh-market/installed',
-        method: 'GET',
-      })
-      setInstalledText(json)
-    } catch {
-      setInstalledText(null)
-    }
+  function handleOpenBrowser() {
+    const url = `http://127.0.0.1:${marketPort}/market`
+    void import('@tauri-apps/api/core').then(({ invoke }) => invoke('open_external_url', { url }))
   }
 
   useEffect(() => {
     void store.market.checkHealth()
     void store.market.refreshStatus()
-    void refreshRegistry()
-    void refreshInstalled()
   }, [])
 
+  const src = `http://127.0.0.1:${marketPort}/market`
+
   return (
-    <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto bg-canvas p-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">{t('market.title')}</h1>
-          <p className="text-sm text-default-500">{t('market.subtitle')}</p>
-        </div>
+    <main className="flex min-h-0 flex-1 flex-col bg-canvas">
+      <header className="flex shrink-0 items-center justify-between border-b border-divider bg-content1 px-3 py-2">
         <div className="flex items-center gap-2">
-          <Chip
-            size="sm"
-            variant="soft"
-            color={marketAlive ? 'success' : 'danger'}
-          >
+          <Chip size="sm" variant="soft" color={marketAlive ? 'success' : 'danger'}>
             {marketAlive ? t('market.host_alive') : t('market.host_dead')}
             {' '}
             :{marketPort}
           </Chip>
+          <span className="text-xs text-default-400">3082 独立于 dsh 3080/3081 · 后端 0 改</span>
+        </div>
+        <div className="flex items-center gap-2">
           <Button size="sm" variant="secondary" onPress={handleRefresh} isDisabled={loading}>
             {loading ? <Spinner size="sm" /> : null}
             {t('market.refresh')}
           </Button>
+          <Button size="sm" variant="ghost" onPress={handleOpenBrowser}>
+            浏览器打开
+          </Button>
         </div>
       </header>
 
-      <Surface className="rounded-lg border border-divider p-4">
-        <div className="mb-2 text-sm font-medium">{t('market.status')}</div>
-        <If cond={!!error}>
-          <pre className="rounded bg-danger-50 p-3 text-xs text-danger-700 whitespace-pre-wrap break-all">{error}</pre>
-        </If>
-        <If cond={!!statusJson}>
-          <pre className="max-h-[320px] overflow-auto rounded bg-default-100 p-3 text-xs whitespace-pre-wrap break-all">{formatJson(statusJson)}</pre>
-        </If>
-        <If cond={!statusJson && !error}>
-          <p className="text-sm text-default-500">{t('market.loading')}</p>
-        </If>
-        <p className="mt-2 text-xs text-default-400">{t('market.host_hint')}</p>
-      </Surface>
+      <If cond={!!error}>
+        <Surface className="m-3 rounded-lg border border-danger-200 bg-danger-50 p-3">
+          <pre className="text-xs text-danger-700 whitespace-pre-wrap break-all">{error}</pre>
+          <pre className="mt-2 text-xs text-default-500 whitespace-pre-wrap break-all">{statusJson ? JSON.stringify(JSON.parse(statusJson), null, 2) : ''}</pre>
+        </Surface>
+      </If>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Surface className="rounded-lg border border-divider p-4">
-          <div className="mb-2 text-sm font-medium">{t('market.registry')}</div>
-          <If cond={!!registryError}>
-            <pre className="rounded bg-danger-50 p-3 text-xs text-danger-700 whitespace-pre-wrap break-all">{registryError}</pre>
-          </If>
-          <If cond={!!registryText}>
-            <pre className="max-h-[400px] overflow-auto rounded bg-default-100 p-3 text-xs whitespace-pre-wrap break-all">{formatJson(registryText)}</pre>
-          </If>
-          <If cond={!registryText && !registryError}>
-            <p className="text-sm text-default-500">{t('market.loading')}</p>
-          </If>
-        </Surface>
-        <Surface className="rounded-lg border border-divider p-4">
-          <div className="mb-2 text-sm font-medium">{t('market.installed')}</div>
-          <If cond={!!installedText}>
-            <pre className="max-h-[400px] overflow-auto rounded bg-default-100 p-3 text-xs whitespace-pre-wrap break-all">{formatJson(installedText)}</pre>
-          </If>
-          <If cond={!installedText}>
-            <p className="text-sm text-default-500">{t('market.loading')}</p>
-          </If>
-        </Surface>
+      <div className="relative flex min-h-0 flex-1">
+        <If cond={!iframeError} else={
+          <Surface className="m-3 w-full rounded-lg border border-divider p-4">
+            <p className="text-sm text-default-500">iframe 加载失败，请点“浏览器打开”或检查侧车是否就绪。</p>
+            <p className="mt-2 text-xs text-default-400">src: {src}</p>
+            <p className="mt-2 text-xs">API 直连测试：{statusJson ? 'status ok' : 'status pending'}</p>
+          </Surface>
+        }>
+          <iframe
+            src={src}
+            title="dsh-market standalone"
+            className="h-full w-full border-0 bg-white"
+            sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+            onError={() => setIframeError(true)}
+            onLoad={() => setIframeError(false)}
+          />
+        </If>
       </div>
-
-      <Surface className="rounded-lg border border-divider p-4">
-        <div className="space-y-1 text-xs text-default-500">
-          <p>{t('market.scheme_hint')}</p>
-          <p>
-            API:
-            {' '}
-            <code className="rounded bg-default-100 px-1">GET /dsh-market/status</code>
-            {' '}
-            <code className="rounded bg-default-100 px-1">GET /dsh-market/registry</code>
-            {' '}
-            <code className="rounded bg-default-100 px-1">GET /dsh-market/installed</code>
-          </p>
-        </div>
-      </Surface>
     </main>
   )
 }
