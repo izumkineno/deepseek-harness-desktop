@@ -12,6 +12,7 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       '@': '/src',
+      '@deepseek-ai/dsh-client-ui-primitives': '/src/market-primitives-shim.tsx',
     },
   },
 

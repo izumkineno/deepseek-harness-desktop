@@ -6,15 +6,13 @@
     "useDefineForClassFields": true,
     "baseUrl": ".",
     "module": "ESNext",
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@deepseek-ai/dsh-client-ui-primitives": ["src/market-primitives-shim.tsx"]
     },
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
-
     /* Linting */
     "strict": true,
     "noFallthroughCasesInSwitch": true,

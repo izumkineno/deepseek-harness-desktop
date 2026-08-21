@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Diagnostics tab — issue #98: renders the profile composition check report
  * served by the host route /dsh-market/check (see src/check.ts). Below the

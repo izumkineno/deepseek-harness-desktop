@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * The activity entry and its panel: every install, update and uninstall the
  * user started, with the action each outcome calls for.

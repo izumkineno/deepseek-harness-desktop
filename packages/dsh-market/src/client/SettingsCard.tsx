@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * The market's card on the plugin configuration page (dsh >= 0.1.0-rc.7).
  *

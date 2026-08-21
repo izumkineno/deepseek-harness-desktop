@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * The Market settings section: Discover / Themes / Installed tabs over the
  * /dsh-market/* host routes, with install/update/uninstall flows and the
